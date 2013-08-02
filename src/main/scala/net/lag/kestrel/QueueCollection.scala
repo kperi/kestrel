@@ -18,6 +18,7 @@
 package net.lag.kestrel
 
 import java.io.File
+import java.io.FileOutputStream
 import java.util.concurrent.{CountDownLatch, ScheduledExecutorService}
 import scala.collection.mutable
 import com.twitter.conversions.time._
@@ -39,6 +40,7 @@ class QueueCollection(queueFolder: String, timer: Timer, journalSyncScheduler: S
   import QueueCollection.unknown
   type ClientDescription = Option[() => String]
 
+ 
   private val log = Logger.get(getClass.getName)
 
   private val path = new File(queueFolder)
@@ -50,6 +52,8 @@ class QueueCollection(queueFolder: String, timer: Timer, journalSyncScheduler: S
     throw new InaccessibleQueuePath
   }
 
+   
+
   private val queues = new mutable.HashMap[String, PersistentQueue]
   private val fanout_queues = new mutable.HashMap[String, mutable.HashSet[String]]
   private val aliases = new mutable.HashMap[String, AliasedQueue]
@@ -57,6 +61,18 @@ class QueueCollection(queueFolder: String, timer: Timer, journalSyncScheduler: S
 
   @volatile private var queueBuilderMap = Map(queueBuilders.map { builder => (builder.name, builder) }: _*)
   @volatile private var aliasConfigMap = Map(aliasBuilders.map { builder => (builder.name, builder()) }: _*)
+
+
+  for( item<-queueBuilderMap ){
+    val _queueFilename =  queueFolder + "/" + item._1;
+    val qpath = new File(_queueFilename)
+    
+    if (! qpath.exists) {
+        new FileOutputStream(_queueFilename).close();
+        log.info( "Created file " + _queueFilename );
+    }  
+  }
+
 
   private def checkNames {
     val duplicates = queueBuilderMap.keySet & aliasConfigMap.keySet
